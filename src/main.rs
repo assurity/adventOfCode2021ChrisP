@@ -11,39 +11,55 @@ fn lines_from_file(filename: impl AsRef<Path>) -> Map<Lines<BufReader<File>>, fn
         .map(|l| l.expect("Could not parse line"))
 }
 
+struct Accumulator {
+    previous: i32,
+    accumulation: i32,
+}
+
 fn main() {
     let path = "input.txt";
-
-    let mut previous = -1;
-    let mut increase_count = 0;
 
     let lines = lines_from_file(&path);
     let numbers = lines.map(|l| l.parse::<i32>().unwrap());
 
-    let _result: Vec<i32> = numbers.map(|current| {
-        if first_record(previous) {
-            println!("skipping first");
-            previous = current;
-            return increase_count;
-        }
+    let result: Accumulator = numbers.fold(Accumulator {
+        previous: -1,
+        accumulation: 0,
+    }, evaluate_current_and_previous);
 
-        if current > previous {
-            print_evaluation(&previous, &current, "increased");
-            increase_count = increase_count + 1;
-        } else {
-            print_evaluation(&previous, &current, "decreased");
-        }
-        previous = current;
-        return increase_count;
-    }).collect();
-
-    println!("Total increase count = {}", increase_count);
+    println!("Total increase count = {}", result.accumulation);
 }
 
-fn first_record(previous: i32) -> bool {
+fn evaluate_current_and_previous(accumulator: Accumulator, current: i32) -> Accumulator {
+    let mut new_accumulator = Accumulator {
+        previous: current,
+        accumulation: accumulator.accumulation, // no increment!
+    };
+    if is_first_record(accumulator.previous) {
+        println!("skipping first");
+        return new_accumulator;
+    }
+
+    let increment_by = evaluate_if_increase_or_decrease(accumulator.previous, current);
+
+    new_accumulator.accumulation = accumulator.accumulation + increment_by;
+    return new_accumulator;
+}
+
+fn evaluate_if_increase_or_decrease(previous: i32, current: i32) -> i32 {
+    return if current > previous {
+        print_evaluation(previous, current, "increased");
+        1
+    } else {
+        print_evaluation(previous, current, "decreased");
+        0
+    }
+}
+
+fn is_first_record(previous: i32) -> bool {
     previous == -1
 }
 
-fn print_evaluation(previous: &i32, current: &i32, direction_label: &str) {
+fn print_evaluation(previous: i32, current: i32, direction_label: &str) {
     println!("{} -> {} == {}", previous, current, direction_label);
 }
